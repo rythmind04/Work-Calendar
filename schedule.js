@@ -13,11 +13,19 @@ export function todayKey() {
   return dateKey(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+export function patternLabel(pattern) {
+  return pattern === 5 ? "5/2" : pattern + "/" + pattern;
+}
+
 export function shiftOn(profile, key) {
   if (!profile) return null;
   if (Object.hasOwn(profile.overrides, key)) return profile.overrides[key];
   const elapsed = dayNumber(key) - dayNumber(profile.start);
   if (elapsed < 0) return null;
+  if (profile.pattern === 5) {
+    const weekday = ((dayNumber(key) + 3) % 7 + 7) % 7;
+    return weekday < 5;
+  }
   return elapsed % (profile.pattern * 2) < profile.pattern;
 }
 

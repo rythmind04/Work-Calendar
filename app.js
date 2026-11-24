@@ -1,7 +1,9 @@
-import { dayNumber, monthDays, sharedDays, shiftOn, todayKey, toggleShift } from "./schedule.js";
+import { dayNumber, monthDays, patternLabel, sharedDays, shiftOn, todayKey, toggleShift } from "./schedule.js";
 
 const byId = id => document.getElementById(id);
-const storageKey = "smeny:" + new URL("./", location.href).pathname;
+const scopePath = new URL("./", location.href).pathname;
+const storageKey = "smeny:" + scopePath;
+const themeKey = "smeny-theme:" + scopePath;
 const monthFormat = new Intl.DateTimeFormat("ru-RU", { month: "long", year: "numeric", timeZone: "UTC" });
 const dateFormat = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", weekday: "short", timeZone: "UTC" });
 const status = byId("status");
@@ -61,7 +63,7 @@ function renderProfiles(active) {
     const select = make("button", "profile", "");
     select.type = "button";
     select.setAttribute("aria-pressed", String(profile === active));
-    select.append(make("span", "profile-name", profile.name), make("span", "cycle", profile.pattern + "/" + profile.pattern));
+    select.append(make("span", "profile-name", profile.name), make("span", "cycle", patternLabel(profile.pattern)));
     select.addEventListener("click", () => {
       if (profile.id === partnerId) partnerId = active?.id;
       model.activeId = profile.id;
@@ -109,7 +111,7 @@ function renderCalendar() {
   const keys = monthDays(year, month);
   const shared = new Set(comparing ? sharedDays(keys, active, partner) : []);
   byId("month-title").textContent = monthFormat.format(new Date(keys[0] + "T00:00:00Z"));
-  byId("active-label").textContent = active ? active.name + " · " + active.pattern + "/" + active.pattern : "Календарь";
+  byId("active-label").textContent = active ? active.name + " · " + patternLabel(active.pattern) : "Календарь";
   byId("prev").disabled = year === 1 && month === 0;
   byId("next").disabled = year === 9999 && month === 11;
   byId("legend").hidden = !active;
@@ -153,6 +155,14 @@ function render() {
   renderCalendar();
 }
 
+function updateStartHint() {
+  const weekdays = patternField.value === "5";
+  byId("start-label").textContent = weekdays ? "Дата начала графика" : "Первый рабочий день цикла";
+  byId("start-hint").textContent = weekdays
+    ? "Рабочие дни с понедельника по пятницу, начиная с выбранной даты."
+    : "С этой даты начнётся блок рабочих дней.";
+}
+
 function openEditor(profile) {
   editingId = profile?.id ?? null;
   byId("editor-title").textContent = profile ? "Изменить график" : "Новый график";
@@ -160,11 +170,13 @@ function openEditor(profile) {
   nameField.setCustomValidity("");
   startField.value = profile?.start ?? todayKey();
   patternField.value = profile?.pattern ?? "2";
+  updateStartHint();
   byId("remove").hidden = !profile;
   editor.showModal();
 }
 
 nameField.addEventListener("input", () => nameField.setCustomValidity(""));
+patternField.addEventListener("change", updateStartHint);
 form.addEventListener("submit", event => {
   event.preventDefault();
   const name = nameField.value.trim();
@@ -234,6 +246,22 @@ byId("clear").addEventListener("click", () => {
   renderCalendar();
   byId("compare").focus();
 });
+
+const themeToggle = byId("theme-toggle");
+if (themeToggle) {
+  const root = document.documentElement;
+  themeToggle.setAttribute("aria-pressed", String(root.dataset.theme === "dark"));
+  themeToggle.addEventListener("click", () => {
+    const theme = root.dataset.theme === "dark" ? "light" : "dark";
+    root.dataset.theme = theme;
+    themeToggle.setAttribute("aria-pressed", String(theme === "dark"));
+    try {
+      localStorage.setItem(themeKey, theme);
+    } catch {
+      status.textContent = "Тема сохранится до закрытия страницы.";
+    }
+  });
+}
 
 render();
 if ("serviceWorker" in navigator) {

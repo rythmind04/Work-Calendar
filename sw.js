@@ -1,6 +1,6 @@
 const scope = self.registration.scope;
 const cachePrefix = "smeny:" + scope + ":";
-const cacheName = cachePrefix + "v1";
+const cacheName = cachePrefix + "v2";
 const toURL = path => new URL(path, scope).href;
 const index = toURL("index.html");
 const assets = new Set([
